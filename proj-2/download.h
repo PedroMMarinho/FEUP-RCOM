@@ -23,6 +23,7 @@
 #define PASSIVE_CODE 227
 #define RETREIVE_CODE 150
 #define TRANSFER_CODE 226
+#define BINARY_CODE 200
 
 typedef struct 
 {

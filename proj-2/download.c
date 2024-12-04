@@ -76,6 +76,18 @@ int main(int argc, char *argv[]) {
         perror("Failed to send password");
         return -1;
     }
+    /*Send binary format*/
+
+    reset_response(&newMessage);
+    newMessage.code = BINARY_CODE;
+    strncpy(newMessage.message, "type I", sizeof(newMessage.message) - 1);
+
+    if(!writeMessage(sockfd,&newMessage)){
+        close(sockfd);
+        perror("Failed to pass binary format");
+        return -1;
+    }
+
 
     /*Send passive mode*/
 
