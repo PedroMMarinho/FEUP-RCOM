@@ -312,19 +312,16 @@ int close_socket(int sockfd) {
 int receiveResponse(int socketfd, response *res) {
     int end = 1;
     char codeBuf[4];
-
+    int index = 0;
     while (end) {
         // Read the 4-character code
         if (readCode(socketfd, codeBuf) == -1) return -1; // Error reading code
-
         // Check if the last character of the code is '-'
         end = (codeBuf[3] == '-');
-
         // Read until a newline character is encountered
-        if (readUntilNewline(socketfd, res->message) == -1) return -1; // Error reading until newline
+        if (readUntilNewline(socketfd, res->message,&index) == -1) return -1; // Error reading until newline
     }
 
-    printf("Code: %s\n", codeBuf);
     res->code = atoi(codeBuf); // Convert the code to an integer
     return 0; // Return the code as an integer
 }
@@ -338,13 +335,14 @@ int readCode(int socketfd, char *code) {
 }
 
 // Function to read data until a newline character is encountered
-int readUntilNewline(int socketfd, char *buf) {
-    int i = 0;
+int readUntilNewline(int socketfd, char *buf, int *index) {
     int res;
+    int i = *index;
     do {
         res = read(socketfd, &buf[i++], 1);
         if (res < 0) return -1; // Handle read error
     } while (buf[i - 1] != '\n');
+    *index = i;
     return 0; // Successfully read until newline
 }
 
