@@ -38,13 +38,13 @@ int main(int argc, char *argv[]) {
     int ret = receiveResponse(sockfd,&newMessage);
     
     if(ret == -1) {
-        close(sockfd);
+        if(close_socket(sockfd) == -1) return -1;
         perror("receiveResponse()");
         return -1;
     }
     
     if(newMessage.code != WELCOME_CODE) {
-        close(sockfd);
+        if(close_socket(sockfd) == -1) return -1;
         perror("Server did not respond with 220.");
         return -1;
     }    
@@ -59,7 +59,7 @@ int main(int argc, char *argv[]) {
     strncat(newMessage.message, url.user, sizeof(newMessage.message) - strlen(newMessage.message) - 1);
     
     if(!writeMessage(sockfd,&newMessage)){
-        close(sockfd);
+        if(close_socket(sockfd) == -1) return -1;
         perror("Failed to send username");
         return -1;
     }
@@ -72,7 +72,7 @@ int main(int argc, char *argv[]) {
     strncat(newMessage.message, url.password, sizeof(newMessage.message) - strlen(newMessage.message) - 1);
 
     if(!writeMessage(sockfd,&newMessage)){
-        close(sockfd);
+        if(close_socket(sockfd) == -1) return -1;
         perror("Failed to send password");
         return -1;
     }
@@ -83,7 +83,7 @@ int main(int argc, char *argv[]) {
     strncpy(newMessage.message, "type I", sizeof(newMessage.message) - 1);
 
     if(!writeMessage(sockfd,&newMessage)){
-        close(sockfd);
+        if(close_socket(sockfd) == -1) return -1;
         perror("Failed to pass binary format");
         return -1;
     }
@@ -96,14 +96,14 @@ int main(int argc, char *argv[]) {
     strncpy(newMessage.message, "pasv", sizeof(newMessage.message));
 
     if(!writeMessage(sockfd,&newMessage)){
-        close(sockfd);
+        if(close_socket(sockfd) == -1) return -1;
         perror("Failed to activate passivemode");
         return -1;
     }
     int port2;
 
     if((port2 = calculate_new_port(newMessage.message,url)) == - 1){
-        close(sockfd);
+        if(close_socket(sockfd) == -1) return -1;
         perror("Failed to calculate port");
         return -1;
     }
@@ -120,7 +120,7 @@ int main(int argc, char *argv[]) {
     strncat(newMessage.message, url.url_path, sizeof(newMessage.message) - strlen(newMessage.message) - 1);
 
     if(!writeMessage(sockfd,&newMessage)){
-        close(sockfd);
+        if(close_socket(sockfd) == -1) return -1;
         perror("Failed to retreive");
         return -1;
     }
@@ -134,7 +134,7 @@ int main(int argc, char *argv[]) {
     }
 
     if(readfile(sockfd2,url.filename,fileSize) == -1){
-        close(sockfd);
+        if(close_socket(sockfd) == -1) return -1;
         return -1;
     }
 
@@ -143,20 +143,20 @@ int main(int argc, char *argv[]) {
     ret = receiveResponse(sockfd,&newMessage);
 
     if(ret == -1) {
-        close(sockfd);
+        if(close_socket(sockfd) == -1) return -1;
         perror("receiveResponse()");
         return -1;
     }
     
     if(newMessage.code != TRANSFER_CODE) {
-        close(sockfd);
+        if(close_socket(sockfd) == -1) return -1;
         perror("Transfer went wrong.");
         return -1;
     }    
     
     printf("Transfer completed successfully\n");
-    close(sockfd);
-    close(sockfd2);
+    if(close_socket(sockfd) == -1) return -1;
+    if(close_socket(sockfd2) == -1) return -1;
 
     return 0;
 }
@@ -292,7 +292,7 @@ int parse_URL(URL *url, char *url_str) {
 
 int close_socket(int sockfd) {
     if(close(sockfd) < 0) {
-        perror("close()");
+        perror("Error closing socket");
         return -1;
     }
     return 0;
