@@ -24,6 +24,7 @@
 #define RETREIVE_CODE 150
 #define TRANSFER_CODE 226
 #define BINARY_CODE 200
+#define GOODBYE_CODE 221
 
 typedef struct 
 {

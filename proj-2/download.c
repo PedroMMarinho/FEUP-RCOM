@@ -80,7 +80,7 @@ int main(int argc, char *argv[]) {
 
     reset_response(&newMessage);
     newMessage.code = BINARY_CODE;
-    strncpy(newMessage.message, "type I", sizeof(newMessage.message) - 1);
+    strncpy(newMessage.message, "type I", sizeof(newMessage.message));
 
     if(!writeMessage(sockfd,&newMessage)){
         if(close_socket(sockfd) == -1) return -1;
@@ -155,9 +155,19 @@ int main(int argc, char *argv[]) {
     }    
     
     printf("Transfer completed successfully\n");
+
+    reset_response(&newMessage);
+    newMessage.code = GOODBYE_CODE;
+    strncpy(newMessage.message, "quit", sizeof(newMessage.message));
+
+    if(!writeMessage(sockfd,&newMessage)){
+        if(close_socket(sockfd) == -1) return -1;
+        perror("Failed to say goodbye");
+        return -1;
+    }
+
     if(close_socket(sockfd) == -1) return -1;
     if(close_socket(sockfd2) == -1) return -1;
-
     return 0;
 }
 
