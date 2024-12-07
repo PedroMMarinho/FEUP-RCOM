@@ -114,7 +114,7 @@ int main(int argc, char *argv[]) {
 
     /*Send retreive*/
     reset_response(&newMessage);
-    newMessage.code = RETREIVE_CODE;
+    newMessage.code = RETREIVE_CODE_WITH_SIZE;
     strncpy(newMessage.message, "retr ", sizeof(newMessage.message) - 1);
     strncat(newMessage.message, url.url_path, sizeof(newMessage.message) - strlen(newMessage.message) - 1);
 
@@ -123,10 +123,12 @@ int main(int argc, char *argv[]) {
         perror("Failed to retreive");
         return -1;
     }
-
+    long long fileSize = 1;
     printf("Filename: %s\n",url.filename);
-
-    long long fileSize = getFileSize(newMessage.message);
+    if (newMessage.code == RETREIVE_CODE_WITH_SIZE) {
+        fileSize = getFileSize(newMessage.message);
+    }
+    
     if(fileSize == -1){
         perror("Failed to get the file size");
         return -1;
@@ -147,7 +149,7 @@ int main(int argc, char *argv[]) {
         return -1;
     }
     
-    if(newMessage.code != TRANSFER_CODE) {
+    if(newMessage.code < MIN_TRANSFER_CODE) {
         if(close_socket(sockfd) == -1) return -1;
         perror("Transfer went wrong.");
         return -1;
@@ -405,6 +407,11 @@ int writeMessage(int sockfd, response *message){
 
     strncpy(message->message, res.message, sizeof(message->message) - 1);
     message->message[sizeof(message->message) - 1] = '\0';
+    if (message->code ==  RETREIVE_CODE_WITH_SIZE) {
+        message->code = res.code;
+        return res.code >= MIN_RETREIVE_CODE && res.code <= MAX_RETREIVE_CODE;
+    }
+
     return res.code == message->code;
 }
 
