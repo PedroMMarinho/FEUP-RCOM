@@ -42,7 +42,6 @@ int main(int argc, char *argv[]) {
         perror("receiveResponse()");
         return -1;
     }
-    
     if(newMessage.code != WELCOME_CODE) {
         if(close_socket(sockfd) == -1) return -1;
         perror("Server did not respond with 220.");
@@ -310,18 +309,28 @@ int close_socket(int sockfd) {
 
 
 int receiveResponse(int socketfd, response *res) {
-    int end = 1;
+    int is_num = 1;
     char codeBuf[4];
     int index = 0;
-    while (end) {
+    while (1) {
         // Read the 4-character code
         if (readCode(socketfd, codeBuf) == -1) return -1; // Error reading code
         // Check if the last character of the code is '-'
-        end = (codeBuf[3] == '-');
-        // Read until a newline character is encountered
+        for (int i = 0; i < 2; i++) {
+            if (!(codeBuf[i] >= '0' && codeBuf[i] <= '9')) {
+                is_num = 0;
+                break;
+            }        
+        }
         if (readUntilNewline(socketfd, res->message,&index) == -1) return -1; // Error reading until newline
-    }
 
+        if (!(codeBuf[3] == '-') && is_num) {
+            break;              
+        }
+        // Read until a newline character is encountered
+        is_num = 1;
+    }
+    printf("Code: %s\n", codeBuf);
     res->code = atoi(codeBuf); // Convert the code to an integer
     return 0; // Return the code as an integer
 }
@@ -387,7 +396,6 @@ int writeMessage(int sockfd, response *message){
     // Receive the server's response
     response res;
     memset(&res, 0, sizeof(res));
-
     if (receiveResponse(sockfd, &res) == -1) {
         perror("receiveResponse failed");
         return -1;
@@ -397,13 +405,12 @@ int writeMessage(int sockfd, response *message){
 
     strncpy(message->message, res.message, sizeof(message->message) - 1);
     message->message[sizeof(message->message) - 1] = '\0';
-
     return res.code == message->code;
 }
 
 int calculate_new_port(char *passiveMsg, URL url){
     int ip1, ip2, ip3, ip4, port1, port2;
-
+    printf("Passive message: %s\n", passiveMsg);
     int parsed = sscanf(passiveMsg, "Entering Passive Mode (%d,%d,%d,%d,%d,%d).", &ip1, &ip2, &ip3, &ip4, &port1, &port2);
     
     if (parsed != 6) {
