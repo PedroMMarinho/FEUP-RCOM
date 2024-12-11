@@ -51,7 +51,7 @@ int get_ip(char* hostname, URL *url);
 int parse_URL(URL *url,char *url_str);
 int close_socket(int sockfd);
 int receiveResponse(int socketfd, response *res);
-int readUntilNewline(int socketfd, char *buf, int *index);
+int readUntilNewline(int socketfd, char *buf);
 int readCode(int socketfd, char *code);
 void showResponse(response *res);
 void reset_response(response *newMessage);

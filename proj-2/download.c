@@ -26,11 +26,13 @@ int main(int argc, char *argv[]) {
         return -1;
     }
     int sockfd;
-
-    if((sockfd = create_socket(url.ip, SERVER_PORT)) == -1) {
+    printf("Creating socket\n");
+    if((sockfd =  create_socket(url.ip, SERVER_PORT)) == -1) {
         perror("create_socket()");
         return -1;
     }
+    printf("Socket created\n");
+
     response newMessage;
 
     reset_response(&newMessage);
@@ -42,20 +44,19 @@ int main(int argc, char *argv[]) {
         perror("receiveResponse()");
         return -1;
     }
+
     if(newMessage.code != WELCOME_CODE) {
         if(close_socket(sockfd) == -1) return -1;
         perror("Server did not respond with 220.");
         return -1;
     }    
-    
-    showResponse(&newMessage);
-
+    printf("----------------------------------------------------------------\n");
+    printf("Connected to server\n");
     /*send username*/
 
     reset_response(&newMessage);
     newMessage.code = USER_CODE;
-    strncpy(newMessage.message, "user ", sizeof(newMessage.message) - 1);
-    strncat(newMessage.message, url.user, sizeof(newMessage.message) - strlen(newMessage.message) - 1);
+    snprintf(newMessage.message, sizeof(newMessage.message), "user %s\r\n", url.user);
     
     if(!writeMessage(sockfd,&newMessage)){
         if(close_socket(sockfd) == -1) return -1;
@@ -67,8 +68,7 @@ int main(int argc, char *argv[]) {
 
     reset_response(&newMessage);
     newMessage.code = PASSWORD_CODE;
-    strncpy(newMessage.message, "pass ", sizeof(newMessage.message) - 1);
-    strncat(newMessage.message, url.password, sizeof(newMessage.message) - strlen(newMessage.message) - 1);
+    snprintf(newMessage.message, sizeof(newMessage.message), "pass %s\r\n", url.password);
 
     if(!writeMessage(sockfd,&newMessage)){
         if(close_socket(sockfd) == -1) return -1;
@@ -79,7 +79,7 @@ int main(int argc, char *argv[]) {
 
     reset_response(&newMessage);
     newMessage.code = BINARY_CODE;
-    strncpy(newMessage.message, "type I", sizeof(newMessage.message));
+    strncpy(newMessage.message, "type I\r\n", sizeof(newMessage.message));
 
     if(!writeMessage(sockfd,&newMessage)){
         if(close_socket(sockfd) == -1) return -1;
@@ -92,7 +92,7 @@ int main(int argc, char *argv[]) {
 
     reset_response(&newMessage);
     newMessage.code = PASSIVE_CODE;
-    strncpy(newMessage.message, "pasv", sizeof(newMessage.message));
+    strncpy(newMessage.message, "pasv\r\n", sizeof(newMessage.message));
 
     if(!writeMessage(sockfd,&newMessage)){
         if(close_socket(sockfd) == -1) return -1;
@@ -115,8 +115,7 @@ int main(int argc, char *argv[]) {
     /*Send retreive*/
     reset_response(&newMessage);
     newMessage.code = RETREIVE_CODE_WITH_SIZE;
-    strncpy(newMessage.message, "retr ", sizeof(newMessage.message) - 1);
-    strncat(newMessage.message, url.url_path, sizeof(newMessage.message) - strlen(newMessage.message) - 1);
+    snprintf(newMessage.message, sizeof(newMessage.message), "retr %s\r\n", url.url_path);
 
     if(!writeMessage(sockfd,&newMessage)){
         if(close_socket(sockfd) == -1) return -1;
@@ -159,7 +158,7 @@ int main(int argc, char *argv[]) {
 
     reset_response(&newMessage);
     newMessage.code = GOODBYE_CODE;
-    strncpy(newMessage.message, "quit", sizeof(newMessage.message));
+    strncpy(newMessage.message, "quit\r\n", sizeof(newMessage.message));
 
     if(!writeMessage(sockfd,&newMessage)){
         if(close_socket(sockfd) == -1) return -1;
@@ -309,32 +308,35 @@ int close_socket(int sockfd) {
     return 0;
 }
 
-
+ 
 int receiveResponse(int socketfd, response *res) {
     int is_num = 1;
-    char codeBuf[4];
-    int index = 0;
     while (1) {
-        // Read the 4-character code
-        if (readCode(socketfd, codeBuf) == -1) return -1; // Error reading code
-        // Check if the last character of the code is '-'
-        for (int i = 0; i < 2; i++) {
-            if (!(codeBuf[i] >= '0' && codeBuf[i] <= '9')) {
+        
+        if (readUntilNewline(socketfd, res->message) == -1) return -1; // Error reading until newline
+
+        showResponse(res);
+        
+        // check if its the code is a number 
+        for (int i = 0; i < 3; i++) {
+            if (!(res->message[i] >= '0' && res->message[i] <= '9')) {
                 is_num = 0;
                 break;
             }        
         }
-        if (readUntilNewline(socketfd, res->message,&index) == -1) return -1; // Error reading until newline
 
-        if (!(codeBuf[3] == '-') && is_num) {
-            break;              
+       // Check if its only the code without -
+        if ((res->message[3] == ' ') && is_num) {
+            res->code = atoi(res->message); // Convert the code to an integer
+            return 0;
         }
+
+        reset_response(res);
         // Read until a newline character is encountered
         is_num = 1;
     }
-    printf("Code: %s\n", codeBuf);
-    res->code = atoi(codeBuf); // Convert the code to an integer
-    return 0; // Return the code as an integer
+
+    return 0; 
 }
 
 int readCode(int socketfd, char *code) {
@@ -346,21 +348,21 @@ int readCode(int socketfd, char *code) {
 }
 
 // Function to read data until a newline character is encountered
-int readUntilNewline(int socketfd, char *buf, int *index) {
+int readUntilNewline(int socketfd, char *buf) {
     int res;
-    int i = *index;
+    int i = 0;
     do {
         res = read(socketfd, &buf[i++], 1);
         if (res < 0) return -1; // Handle read error
     } while (buf[i - 1] != '\n');
-    *index = i;
+
     return 0; // Successfully read until newline
 }
 
 
 // Message formating is weird
 void showResponse(response *res) {
-    printf("Message: %s\n", res->message);
+    printf("%s", res->message);
 }
 
 
@@ -375,7 +377,7 @@ int writeMessage(int sockfd, response *message){
         return -1;
     }
 
-    printf("Sending message: %s\n", message->message);
+    printf("\n%s", message->message);
 
     size_t bytes_sent = 0;
     size_t to_send = strlen(message->message);
@@ -390,23 +392,20 @@ int writeMessage(int sockfd, response *message){
         bytes_sent += result;
     }
 
-    if (write(sockfd, "\r\n", 2) < 0) {
-        perror("Error writing CRLF to socket");
-        return -1;
-    }
 
     // Receive the server's response
     response res;
     memset(&res, 0, sizeof(res));
+
     if (receiveResponse(sockfd, &res) == -1) {
         perror("receiveResponse failed");
         return -1;
     }
 
-    printf("Response code: %d \nMessage: %s\n", res.code, res.message);
-
+    
     strncpy(message->message, res.message, sizeof(message->message) - 1);
     message->message[sizeof(message->message) - 1] = '\0';
+
     if (message->code ==  RETREIVE_CODE_WITH_SIZE) {
         message->code = res.code;
         return res.code >= MIN_RETREIVE_CODE && res.code <= MAX_RETREIVE_CODE;
@@ -417,8 +416,8 @@ int writeMessage(int sockfd, response *message){
 
 int calculate_new_port(char *passiveMsg, URL url){
     int ip1, ip2, ip3, ip4, port1, port2;
-    printf("Passive message: %s\n", passiveMsg);
-    int parsed = sscanf(passiveMsg, "Entering Passive Mode (%d,%d,%d,%d,%d,%d).", &ip1, &ip2, &ip3, &ip4, &port1, &port2);
+
+    int parsed = sscanf(passiveMsg, "%*[^(](%d,%d,%d,%d,%d,%d)", &ip1, &ip2, &ip3, &ip4, &port1, &port2);
     
     if (parsed != 6) {
         perror("Failed to parse passive message");
