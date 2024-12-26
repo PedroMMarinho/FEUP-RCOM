@@ -1,4 +1,4 @@
-# FEUP-PFL 2024/2025
+# FEUP-RCOM 2024/2025
 Projects in C for the RCOM curricular unit.
 ## Project Infos
 - Date: 3rd Year, 1st Semester
